@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" fill="#15171A"/>
+  <!-- the roof + window from the BND mark -->
+  <path d="M32 12 L57 39 L48 39 L32 21.5 L16 39 L7 39 Z" fill="#BE8A4C"/>
+  <rect x="25" y="35" width="14" height="14" fill="#BE8A4C"/>
+  <rect x="31" y="35" width="2" height="14" fill="#15171A"/>
+  <rect x="25" y="41" width="14" height="2" fill="#15171A"/>
+</svg>

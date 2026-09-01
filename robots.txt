@@ -1,0 +1,4 @@
+# MOCKUP / PREVIEW BUILD — not the launch build.
+# Replace this file with an allow rule when the real site goes live.
+User-agent: *
+Disallow: /
