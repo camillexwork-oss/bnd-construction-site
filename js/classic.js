@@ -501,6 +501,11 @@
   'use strict';
 
   var forms = document.querySelectorAll('form[data-native]');
+  /* Success is judged by the iframe reaching our own form-ok.html, so every
+     form's _next MUST be an absolute URL. FormSubmit resolves a relative one
+     against its own origin: "form-ok.html" sent the iframe to
+     https://formsubmit.co/form-ok.html - cross-origin, unreadable here, and
+     reported to the visitor as a failure even though the mail had gone. */
   var sink = document.querySelector('iframe[name="bnd-sink"]');
   if (!forms.length || !sink) return;
 
