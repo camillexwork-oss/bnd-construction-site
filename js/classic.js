@@ -9,6 +9,44 @@
 
   doc.documentElement.classList.add('js');
 
+  /* ---------- page load ----------
+     Gates the hero entrance only. There is no preloader and nothing waits
+     on this: the page is interactive from first paint, this just lets the
+     photograph settle rather than snapping in. */
+  function markLoaded() {
+    /* On a warm reload readyState is already 'complete', so adding the
+       class here would land in the SAME frame as first paint - the start
+       state never gets painted and the browser has nothing to transition
+       from, which makes the hero look static on every refresh. Two frames
+       guarantees the opacity:0 / scale(1.05) state is on screen first. */
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { doc.documentElement.classList.add('is-loaded'); });
+    });
+  }
+  if (doc.readyState === 'complete') markLoaded();
+  else window.addEventListener('load', markLoaded);
+  /* a slow hero image must never hold the headline hostage */
+  setTimeout(markLoaded, 1200);
+
+  /* ---------- stagger card groups ----------
+     Delay is carried by data-i in CSS. Rather than hand-tagging every
+     card, walk the known groups and number their children. Grids longer
+     than eight cycle 1-4, so each ROW steps instead of the last card
+     waiting on the whole first row. */
+  (function stagger() {
+    var groups = doc.querySelectorAll('.cards,.pods,.grid4,.hilite');
+    for (var g = 0; g < groups.length; g++) {
+      var kids = groups[g].children, n = 0, wide = kids.length > 8;
+      for (var i = 0; i < kids.length; i++) {
+        if (!kids[i].hasAttribute('data-up')) continue;
+        /* position in the group wins over any hand-authored data-i: those
+           were an ad-hoc 0,1,2 that collides with a clean sequence */
+        kids[i].setAttribute('data-i', String(wide ? (n % 4) + 1 : Math.min(n + 1, 8)));
+        n++;
+      }
+    }
+  })();
+
   /* ---------- scroll reveals ---------- */
   var ups = doc.querySelectorAll('[data-up]');
   function showAll() { for (var i = 0; i < ups.length; i++) ups[i].classList.add('on'); }
@@ -23,23 +61,148 @@
         io.unobserve(es[i].target);
       }
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
-    for (var j = 0; j < ups.length; j++) io.observe(ups[j]);
 
-    /* never let a reveal be the reason content is invisible */
-    window.addEventListener('load', function () {
-      for (var k = 0; k < ups.length; k++) {
-        if (ups[k].getBoundingClientRect().top < window.innerHeight) ups[k].classList.add('on');
-      }
+    /* Observation starts two frames late, on purpose. Anything already in
+       view intersects immediately, and on a warm reload that callback can
+       land in the same frame as first paint - the start state is never
+       painted, so there is nothing to transition from and the hero looks
+       static. Two frames costs ~32ms and guarantees the motion is seen. */
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        for (var j = 0; j < ups.length; j++) io.observe(ups[j]);
+        queueSweep();
+      });
     });
-    setTimeout(showAll, 2800);
+
+    /* Safety net, not a bypass.
+       This used to be a blanket showAll() on a 2.8s timer, which revealed
+       the WHOLE page two seconds after load - so everything below the fold
+       was already on screen before the reader ever scrolled to it, and no
+       scroll reveal was ever actually seen. The net now only ever reveals
+       what is genuinely in view, so a failed observer still cannot leave
+       content invisible, but nothing is revealed ahead of the reader. */
+    var sweeping = false;
+    function sweep() {
+      sweeping = false;
+      var vh = window.innerHeight;
+      for (var k = 0; k < ups.length; k++) {
+        var el = ups[k];
+        if (el.classList.contains('on')) continue;
+        var r = el.getBoundingClientRect();
+        if (r.top < vh * 0.92 && r.bottom > 0) { el.classList.add('on'); io.unobserve(el); }
+      }
+    }
+    function queueSweep() {
+      if (!sweeping) { sweeping = true; requestAnimationFrame(sweep); }
+    }
+    window.addEventListener('scroll', queueSweep, { passive: true });
+    window.addEventListener('resize', queueSweep, { passive: true });
   }
+
+  /* ---------- statistics ----------
+     Counts the digits up once, the first time the block is seen. Values
+     are read from the markup and never invented: anything without a
+     number in it (OSHA) is skipped, and whatever surrounds the digits -
+     a "+", a comma - is put back exactly as authored. */
+  (function counters() {
+    if (reduce || !('IntersectionObserver' in window)) return;
+    var els = doc.querySelectorAll('.figs__k');
+    var live = [];
+    for (var i = 0; i < els.length; i++) {
+      var m = /^(\D*)(\d[\d,]*)(\D*)$/.exec(els[i].textContent.trim());
+      if (!m) continue;
+      live.push({
+        el: els[i], pre: m[1], post: m[3],
+        to: parseInt(m[2].replace(/,/g, ''), 10),
+        grouped: m[2].indexOf(',') > -1
+      });
+    }
+    if (!live.length) return;
+
+    function paint(s, v) {
+      s.el.textContent = s.pre + (s.grouped ? v.toLocaleString('en-US') : v) + s.post;
+    }
+    function run(s) {
+      var dur = 1300, t0 = 0;
+      function frame(t) {
+        if (!t0) t0 = t;
+        var p = Math.min((t - t0) / dur, 1);
+        paint(s, Math.round(s.to * (1 - Math.pow(1 - p, 3))));
+        if (p < 1) requestAnimationFrame(frame);
+        else paint(s, s.to);            /* land exactly on the authored value */
+      }
+      requestAnimationFrame(frame);
+    }
+
+    var cio = new IntersectionObserver(function (es) {
+      for (var i = 0; i < es.length; i++) {
+        if (!es[i].isIntersecting) continue;
+        cio.unobserve(es[i].target);
+        for (var k = 0; k < live.length; k++) {
+          if (live[k].el === es[i].target && !live[k].done) { live[k].done = true; run(live[k]); }
+        }
+      }
+    }, { threshold: 0.5 });
+
+    for (var j = 0; j < live.length; j++) {
+      /* already on screen at load: leave the real number alone rather than
+         blanking it to zero in front of the reader */
+      if (live[j].el.getBoundingClientRect().top < window.innerHeight) { live[j].done = true; continue; }
+      paint(live[j], 0);
+      cio.observe(live[j].el);
+    }
+    /* if the observer never fires, the number must not be left at zero */
+    setTimeout(function () {
+      for (var q = 0; q < live.length; q++) if (!live[q].done) { live[q].done = true; paint(live[q], live[q].to); }
+    }, 4000);
+  })();
+
+  /* ---------- parallax ----------
+     Two images only. Both sit in an overflow:hidden parent and are scaled
+     up in CSS by more than the travel, so the shift cannot expose an edge.
+     Fine pointers and wide viewports only; the handler is rAF-throttled
+     and only measures elements currently in view. */
+  (function parallax() {
+    if (reduce || !('IntersectionObserver' in window)) return;
+    if (!(window.matchMedia && window.matchMedia('(pointer:fine)').matches)) return;
+    if (window.innerWidth < 761) return;
+
+    var imgs = doc.querySelectorAll('.band__media img,.shot__main img');
+    if (!imgs.length) return;
+    for (var i = 0; i < imgs.length; i++) imgs[i].setAttribute('data-par', '');
+
+    var vis = [], ticking = false, MAX = 8;
+    function queue() { if (!ticking) { ticking = true; requestAnimationFrame(apply); } }
+    function apply() {
+      ticking = false;
+      var h = window.innerHeight;
+      for (var i = 0; i < vis.length; i++) {
+        var r = vis[i].getBoundingClientRect();
+        var mid = (r.top + r.height / 2 - h / 2) / h;
+        vis[i].style.setProperty('--par', (Math.max(-1, Math.min(1, mid)) * MAX).toFixed(1) + 'px');
+      }
+    }
+    var pio = new IntersectionObserver(function (es) {
+      for (var i = 0; i < es.length; i++) {
+        var at = vis.indexOf(es[i].target);
+        if (es[i].isIntersecting) { if (at < 0) vis.push(es[i].target); }
+        else if (at > -1) vis.splice(at, 1);
+      }
+      if (vis.length) queue();
+    }, { rootMargin: '12% 0px' });
+    for (var k = 0; k < imgs.length; k++) pio.observe(imgs[k]);
+
+    window.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue, { passive: true });
+    apply();
+  })();
 
   /* ---------- sticky nav shadow ---------- */
   var bar = doc.getElementById('bar');
   if (bar) {
     var stuck = false;
     var onScroll = function () {
-      var should = window.scrollY > 8;
+      var should = window.scrollY > 50;
       if (should !== stuck) { stuck = should; bar.classList.toggle('is-stuck', stuck); }
     };
     onScroll();
@@ -228,7 +391,7 @@
     })(buttons[b]);
   }
 
-  /* deep link: portfolio-classic.html?market=Retail */
+  /* deep link: portfolio.html?market=Retail */
   var q = new URLSearchParams(window.location.search).get('market');
   if (q) {
     for (var m = 0; m < buttons.length; m++) {
@@ -305,7 +468,7 @@
   var modal = document.getElementById('estimate-modal');
   if (!modal || typeof modal.showModal !== 'function') return;
 
-  var triggers = document.querySelectorAll('a[href$="estimate-classic.html"]');
+  var triggers = document.querySelectorAll('a[href$="request-an-estimate.html"]');
   if (!triggers.length) return;
 
   for (var i = 0; i < triggers.length; i++) {
