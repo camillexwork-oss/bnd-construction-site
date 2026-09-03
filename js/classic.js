@@ -650,6 +650,22 @@
   var slides = stage.querySelectorAll('[data-slide]');
   if (slides.length < 2) return;
 
+  /* Slides 2-n ship without a src: at opacity 0 they are invisible, but
+     loading them eagerly put ~1.3MB on the wire in front of the hero image
+     and pushed LCP past six seconds. Hydrate once the page has loaded, long
+     before the first rotation at 6s. If this never runs, slide one still
+     shows and the hero is simply static. */
+  function hydrate() {
+    for (var i = 0; i < slides.length; i++) {
+      var el = slides[i];
+      if (el.dataset.srcset && !el.srcset) el.srcset = el.dataset.srcset;
+      if (el.dataset.src && !el.getAttribute('src')) el.src = el.dataset.src;
+    }
+  }
+  if (document.readyState === 'complete') hydrate();
+  else window.addEventListener('load', hydrate);
+
+
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   var timer = null;

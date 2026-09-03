@@ -10,8 +10,14 @@
 
 <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/CabinetGrotesk-Extrabold.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/PlusJakartaSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" as="image" href="images/projects/evolve-dermatology-lg.jpg" fetchpriority="high">
+
+<!-- srcset-aware preload. Without imagesrcset the browser preloads the 1800w
+     file on every device, so a phone fetched BOTH it and the 900w the <img>
+     actually picked - 842KB for one hero image. -->
+<link rel="preload" as="image" fetchpriority="high" type="image/webp"
+      href="images/projects/evolve-dermatology-900.webp"
+      imagesrcset="images/projects/evolve-dermatology-520.webp 520w, images/projects/evolve-dermatology-900.webp 900w, images/projects/evolve-dermatology-1800.webp 1800w"
+      imagesizes="100vw">
 
 <!-- Canonical and social. SITE is the only thing to change at launch:
      swap it in build order and re-run, or find/replace this host. A canonical
@@ -172,29 +178,29 @@
   <section class="hero">
     <div class="hero__media" data-slides>
       <img class="hero__slide is-on" data-slide
-           src="images/projects/evolve-dermatology-lg.jpg"
-           srcset="images/projects/evolve-dermatology.jpg 900w, images/projects/evolve-dermatology-lg.jpg 1800w" sizes="100vw"
+           src="images/projects/evolve-dermatology-900.webp"
+           srcset="images/projects/evolve-dermatology-520.webp 520w, images/projects/evolve-dermatology-900.webp 900w, images/projects/evolve-dermatology-1800.webp 1800w" sizes="100vw"
            alt="Evolve Dermatology clinic exterior in stone and glass with a full-height curtain wall"
            width="856" height="900"
            fetchpriority="high">
       <img class="hero__slide" data-slide
-           src="images/projects/bear-family-dental-lg.jpg"
-           srcset="images/projects/bear-family-dental.jpg 900w, images/projects/bear-family-dental-lg.jpg 1800w" sizes="100vw"
+           data-src="images/projects/bear-family-dental-900.webp"
+           data-srcset="images/projects/bear-family-dental-520.webp 520w, images/projects/bear-family-dental-900.webp 900w, images/projects/bear-family-dental-1800.webp 1800w" sizes="100vw"
            alt="" aria-hidden="true"
            width="900" height="695"
-           fetchpriority="low" loading="eager" decoding="async">
+           fetchpriority="low" decoding="async">
       <img class="hero__slide" data-slide
-           src="images/projects/walk-ons-sports-bistreaux-lg.jpg"
-           srcset="images/projects/walk-ons-sports-bistreaux.jpg 900w, images/projects/walk-ons-sports-bistreaux-lg.jpg 1800w" sizes="100vw"
+           data-src="images/projects/walk-ons-sports-bistreaux-900.webp"
+           data-srcset="images/projects/walk-ons-sports-bistreaux-520.webp 520w, images/projects/walk-ons-sports-bistreaux-900.webp 900w, images/projects/walk-ons-sports-bistreaux-1800.webp 1800w" sizes="100vw"
            alt="" aria-hidden="true"
            width="900" height="681"
-           fetchpriority="low" loading="eager" decoding="async">
+           fetchpriority="low" decoding="async">
       <img class="hero__slide" data-slide
-           src="images/projects/oak-point-lg.jpg"
-           srcset="images/projects/oak-point.jpg 900w, images/projects/oak-point-lg.jpg 1800w" sizes="100vw"
+           data-src="images/projects/oak-point-900.webp"
+           data-srcset="images/projects/oak-point-520.webp 520w, images/projects/oak-point-900.webp 900w, images/projects/oak-point-1800.webp 1800w" sizes="100vw"
            alt="" aria-hidden="true"
            width="900" height="620"
-           fetchpriority="low" loading="eager" decoding="async">
+           fetchpriority="low" decoding="async">
     </div>
 
     <div class="wrap wrap--wide">
