@@ -49,5 +49,12 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/index-classic.html",
+      "destination": "/",
+      "permanent": false
+    }
   ]
 }
